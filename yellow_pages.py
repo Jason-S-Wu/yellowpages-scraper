@@ -7,7 +7,7 @@ import unicodecsv as csv
 import argparse
 
 
-def parse_listing(keyword, place):
+def parse_listing(keyword, place, no_of_pages = 0):
     """
 
     Function to process yellowpage listing page
@@ -29,9 +29,12 @@ def parse_listing(keyword, place):
                'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/64.0.3282.140 Safari/537.36'
                }
     # Adding retries
-    for retry in range(10):
+    scraped_results = []
+
+    for i in range(1, int(no_of_pages) + 1):
         try:
-            response = requests.get(url, verify=False, headers=headers)
+            temp_url = url + '&page=' + str(i)
+            response = requests.get(temp_url , verify=False, headers=headers)
             print("parsing page")
             if response.status_code == 200:
                 parser = html.fromstring(response.text)
@@ -41,7 +44,6 @@ def parse_listing(keyword, place):
 
                 XPATH_LISTINGS = "//div[@class='search-results organic']//div[@class='v-card']"
                 listings = parser.xpath(XPATH_LISTINGS)
-                scraped_results = []
 
                 for results in listings:
                     XPATH_BUSINESS_NAME = ".//a[@class='business-name']//text()"
@@ -98,7 +100,6 @@ def parse_listing(keyword, place):
                     }
                     scraped_results.append(business_details)
 
-                return scraped_results
 
             elif response.status_code == 404:
                 print("Could not find a location matching", place)
@@ -112,18 +113,21 @@ def parse_listing(keyword, place):
             print("Failed to process page")
             return []
 
+    return scraped_results
 
 if __name__ == "__main__":
 
     argparser = argparse.ArgumentParser()
     argparser.add_argument('keyword', help='Search Keyword')
     argparser.add_argument('place', help='Place Name')
+    argparser.add_argument('no_of_pages', help='Number of pages to scrape', default=0)
 
     args = argparser.parse_args()
     keyword = args.keyword
     place = args.place
+    no_of_pages = args.no_of_pages
 
-    scraped_data = parse_listing(keyword, place)
+    scraped_data = parse_listing(keyword, place, no_of_pages)
 
     if scraped_data:
         print("Writing scraped data to %s-%s-yellowpages-scraped-data.csv" % (keyword, place))
